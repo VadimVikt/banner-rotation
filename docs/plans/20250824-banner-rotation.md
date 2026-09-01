@@ -102,19 +102,19 @@
 ### Задача 1 — Каркас проекта
 **Цель:** Настроить структуру проекта, зависимости и средства сборки.
 
-- [ ] 1.1. Убрать `main.go` наверх, создать `cmd/server/main.go` с минимальной `main()`
-- [ ] 1.2. Добавить зависимости в `go.mod` (только infra-зависимости):
+- [x] 1.1. Убрать `main.go` наверх, создать `cmd/server/main.go` с минимальной `main()`
+- [x] 1.2. Добавить зависимости в `go.mod` (только infra-зависимости):
   - `github.com/go-chi/chi/v5` — HTTP-роутер (handler)
   - `modernc.org/sqlite` — SQLite-драйвер (repo, pure Go)
   - `github.com/streadway/amqp` — AMQP-клиент для RabbitMQ (event)
-- [ ] 1.3. Создать `internal/model/model.go` с доменными типами (**stdlib only**):
+- [x] 1.3. Создать `internal/model/model.go` с доменными типами (**stdlib only**):
   - `Slot{ID, Description}`
   - `Banner{ID, Description}`
   - `SlotBanner{SlotID, BannerID}` (связь, 1 баннер может быть в нескольких слотах)
   - `BannerStats{SlotID, BannerID, GroupID, Impressions, Clicks}` (на слот на группу)
   - `Event{Type: "click"|"impression", SlotID, BannerID, GroupID, Timestamp}`
-- [ ] 1.4. Создать `Makefile` с целевыми правилами: `build`, `run`, `test`, `clean`
-- [ ] 1.5. Убедиться, что `go build ./...` компилируется
+- [x] 1.4. Создать `Makefile` с целевыми правилами: `build`, `run`, `test`, `clean`
+- [x] 1.5. Убедиться, что `go build ./...` компилируется
 
 **Тесты:** Проверка компиляции.
 **Оценка:** 1 час
@@ -125,7 +125,7 @@
 **Цель:** Реализовать и протестировать алгоритм Thompson Sampling изолированно.
 **Покрытие:** ⚠️ O1, 2 балла + 1 очко (unit-тесты) + 1 очко (качество тестов)
 
-- [ ] 2.1. Создать `internal/bandit/thompson.go`:
+- [x] 2.1. Создать `internal/bandit/thompson.go`:
   - `type Bandit struct` — хранит Beta-распределения на каждую руку (alpha, beta)
   - `NewBandit() *Bandit`
   - `AddArm(id string)` — зарегистрировать новую руку (баннер)
@@ -133,7 +133,7 @@
   - `Update(id string, clicked bool)` — обновить параметры Beta (alpha+=1 при клике, beta+=1 при отсутствии)
   - `Pick() string` — сэмплировать из Beta-распределения каждой руки, вернуть руку с наибольшим значением
   - `PickWithImpression() string` — выбрать + увеличить счётчик показов (beta+=1 для выбранной руки)
-- [ ] 2.2. Создать `internal/bandit/thompson_test.go`:
+- [x] 2.2. Создать `internal/bandit/thompson_test.go`:
   - `TestPickReturnsExistingArm` — выбор возвращает только зарегистрированные руки
   - `TestEachArmShownAtLeastOnce` — после N выборов (N >> кол-во рук), каждая рука выбрана ≥1 раза
   - `TestPopularArmGetsMoreImpressions` — если одна рука получает клики, со временем она выбирается значительно чаще
