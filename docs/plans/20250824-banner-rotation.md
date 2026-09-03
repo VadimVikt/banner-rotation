@@ -186,7 +186,7 @@
 ### Задача 4 — Сервисный слой (CORE, stdlib only)
 **Цель:** Бизнес-логика, оркестрация бандита + репозитория + публикатора.
 
-- [ ] 4.1. Создать `internal/service/service.go`:
+- [x] 4.1. Создать `internal/service/service.go`:
   - Структура `Service` с `Repo` (интерфейс), `Publisher` (интерфейс) и картой `*bandit.Bandit` на каждую пару (slotID, groupID)
   - `NewService(repo Repo, publisher event.Publisher) *Service`
   - `AddBanner(slotID, bannerID string) error` — добавить баннер в слот, обновить бандит
@@ -203,7 +203,7 @@
     1. Увеличить клики в репозитории
     2. Обновить бандит с clicked=true
     3. Опубликовать событие клика
-- [ ] 4.2. Создать `internal/service/service_test.go`:
+- [x] 4.2. Создать `internal/service/service_test.go`:
   - Использовать мок `Publisher` (считать события)
   - Интерфейсный `Repo` — мок или в-memory SQLite через repo-адаптер
   - `TestPickBannerReturnsValidBanner` — возвращённый баннер существует в слоте
