@@ -151,7 +151,7 @@
 ### Задача 3 — Репозиторий базы данных (INFRA, sqlite — external dep)
 **Цель:** Персистентность на SQLite для слотов, баннеров и статистики.
 
-- [ ] 3.1. Создать `internal/repo/repo.go`:
+- [x] 3.1. Создать `internal/repo/repo.go`:
   - Структура `Repo`, оборачивающая `*sql.DB`
   - `NewRepo(dsn string) (*Repo, error)` — открывает БД, запускает миграции
   - SQL-схема:
@@ -173,8 +173,8 @@
   - `GetBannerStats(slotID, bannerID, groupID string) (impressions, clicks int, error)`
   - `IncrementImpressions(slotID, bannerID, groupID string) error`
   - `IncrementClicks(slotID, bannerID, groupID string) error`
-- [ ] 3.2. Создать `internal/repo/repo_test.go`:
-  - Использовать `file::memory:?cache=shared` для встраиваемого SQLite в памяти
+- [x] 3.2. Создать `internal/repo/repo_test.go`:
+  - Использовать `file::memory:` для встраиваемого SQLite в памяти
   - Протестировать каждый метод на корректность
   - Протестировать конкурентный доступ (несколько горутин, увеличивающих статистику)
 
