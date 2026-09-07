@@ -9,6 +9,18 @@ import (
 	_ "modernc.org/sqlite" // SQLite driver (pure Go, no CGO)
 )
 
+// RepoInterface abstracts persistent storage for slots, banners, and banner statistics.
+// This interface is used by the service layer (CORE) to remain dependency-free.
+type RepoInterface interface {
+	CreateSlot(id, desc string) error
+	CreateBanner(id, desc string) error
+	AddBannerToSlot(slotID, bannerID string) error
+	RemoveBannerFromSlot(slotID, bannerID string) error
+	GetBannersForSlot(slotID string) ([]string, error)
+	IncrementImpressions(slotID, bannerID, groupID string) error
+	IncrementClicks(slotID, bannerID, groupID string) error
+}
+
 const schema = `
 CREATE TABLE IF NOT EXISTS slots (
 	id TEXT PRIMARY KEY,
@@ -41,6 +53,9 @@ type Repo struct {
 	db *sql.DB
 	mu sync.Mutex
 }
+
+// Ensure Repo implements RepoInterface at compile time.
+var _ RepoInterface = (*Repo)(nil)
 
 // NewRepo opens a SQLite database at the given DSN and runs schema migrations.
 // Example DSN for file-based: "file:/path/to/db.sqlite?_journal_mode=WAL"
