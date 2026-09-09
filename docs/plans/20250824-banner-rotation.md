@@ -220,15 +220,15 @@
 ### Задача 5 — Публикатор событий (INFRA, amqp — external dep)
 **Цель:** Публикация событий показов/кликов в RabbitMQ.
 
-- [ ] 5.1. Создать `internal/event/publisher.go`:
+- [x] 5.1. Создать `internal/event/publisher.go`:
   - `type Publisher interface { Publish(ctx context.Context, event model.Event) error }`
   - `type NOPublisher struct {}` — no-op для тестов
-- [ ] 5.2. Создать `internal/event/rabbitmq.go`:
+- [x] 5.2. Создать `internal/event/rabbitmq.go`:
   - `type RabbitMQPublisher struct { conn *amqp.Conn; ch *amqp.Channel }`
   - `NewRabbitMQPublisher(url string) (*RabbitMQPublisher, error)`
   - `Publish(ctx, event)` — сериализовать событие в JSON (`encoding/json`, stdlib), publicar в очередь
   - Декларация exchange + queue при инициализации (auto-declare)
-- [ ] 5.3. Добавить URL RabbitMQ-брокера в флаги/переменные окружения сервера (`RABBITMQ_URL`)
+- [x] 5.3. Добавить URL RabbitMQ-брокера в флаги/переменные окружения сервера (`RABBITMQ_URL`)
 
 **Тесты:** RabbitMQ-публикатор тестируется в интеграционных тестах (Задача 7). Unit-тест для NOPublisher.
 **Очки:** 1 очко (статистика в очередь)
