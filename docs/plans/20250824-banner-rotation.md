@@ -239,7 +239,7 @@
 ### Задача 6 — REST API (INFRA, chi — external dep)
 **Цель:** HTTP-эндпоинты для сервиса.
 
-- [ ] 6.1. Создать `internal/handler/handler.go`:
+- [x] 6.1. Создать `internal/handler/handler.go`:
   - `AddBanner(w http.ResponseWriter, r *http.Request)` — `POST /slots/:slotID/banners`
     - Тело: `{"banner_id": "...", "description": "..."}`
   - `RemoveBanner(w, r)` — `DELETE /slots/:slotID/banners/:bannerID`
@@ -249,11 +249,11 @@
     - Ответ: `204 No Content`
   - `CreateSlot(w, r)` — `POST /slots`
     - Тело: `{"id": "...", "description": "..."}`
-- [ ] 6.2. Подключить хендлеры в `cmd/server/main.go`:
+- [x] 6.2. Подключить хендлеры в `cmd/server/main.go`:
   - Инициализировать SQLite-репозиторий, RabbitMQ-публикатор, сервис
   - Настроить chi-роутер с маршрутами
   - Грациозное завершение по SIGTERM
-- [ ] 6.3. Добавить валидацию запросов (возвращать 400 при отсутствии параметров)
+- [x] 6.3. Добавить валидацию запросов (возвращать 400 при отсутствии параметров)
 
 **Тесты:** Интеграционные тесты (Задача 7).
 **Очки:** 2 очка (API)

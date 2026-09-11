@@ -17,6 +17,9 @@ import (
 // ErrNoBanners is returned when a slot has no banners.
 var ErrNoBanners = errors.New("slot has no banners")
 
+// ErrUnknownBanner is returned when a banner is not found in the slot.
+var ErrUnknownBanner = errors.New("banner not found in slot")
+
 // Service orchestrates banner selection using multi-armed bandit per slot+group.
 type Service struct {
 	repo      repo.RepoInterface
@@ -52,7 +55,23 @@ func (s *Service) syncArms(b *bandit.Bandit, bannerIDs []string) {
 	}
 }
 
+func (s *Service) CreateSlot(id, desc string) error {
+	return s.repo.CreateSlot(id, desc)
+}
+
+func (s *Service) CreateBanner(id, desc string) error {
+	return s.repo.CreateBanner(id, desc)
+}
+
 func (s *Service) AddBanner(slotID, bannerID string) error {
+	return s.repo.AddBannerToSlot(slotID, bannerID)
+}
+
+// AddBannerWithDescription creates the banner in the repository and adds it to the slot.
+func (s *Service) AddBannerWithDescription(slotID, bannerID, desc string) error {
+	if err := s.repo.CreateBanner(bannerID, desc); err != nil {
+		return fmt.Errorf("create banner %q: %w", bannerID, err)
+	}
 	return s.repo.AddBannerToSlot(slotID, bannerID)
 }
 
@@ -91,6 +110,21 @@ func (s *Service) PickBanner(ctx context.Context, slotID, groupID string) (strin
 }
 
 func (s *Service) RegisterClick(ctx context.Context, slotID, bannerID, groupID string) error {
+	banners, err := s.repo.GetBannersForSlot(slotID)
+	if err != nil {
+		return fmt.Errorf("get banners for slot %q: %w", slotID, err)
+	}
+	found := false
+	for _, id := range banners {
+		if id == bannerID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("%w: %s in slot %s", ErrUnknownBanner, bannerID, slotID)
+	}
+
 	if err := s.repo.IncrementClicks(slotID, bannerID, groupID); err != nil {
 		return fmt.Errorf("increment clicks: %w", err)
 	}
