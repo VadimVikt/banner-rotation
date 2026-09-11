@@ -1,14 +1,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/VadimVikt/banner-rotation/internal/event"
+	"github.com/VadimVikt/banner-rotation/internal/handler"
 	"github.com/VadimVikt/banner-rotation/internal/repo"
 	"github.com/VadimVikt/banner-rotation/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -49,8 +56,42 @@ func main() {
 
 	// 4. Create service
 	svc := service.NewService(r, pub)
-	_ = svc // wire up handlers in Task 6
 
-	fmt.Println("server initialized successfully")
+	// 5. Create handlers and register routes
+	h := handler.NewHandlers(svc)
+	router := chi.NewMux()
+	h.RegisterRoutes(router)
+
+	// 6. Start HTTP server
+	srv := &http.Server{
+		Addr:         *addr,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	// Graceful shutdown
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server failed: %v", err)
+		}
+	}()
+
+	fmt.Printf("server started on %s\n", *addr)
 	fmt.Println("run with --rabbitmq=nop to skip RabbitMQ connection")
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("shutting down server...")
+
+	// Shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("server forced to shutdown: %v", err)
+	}
+	log.Println("server stopped")
 }
