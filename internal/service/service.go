@@ -50,8 +50,24 @@ func (s *Service) getBandit(slotID, groupID string) *bandit.Bandit {
 }
 
 func (s *Service) syncArms(b *bandit.Bandit, bannerIDs []string) {
+	// Add new arms
 	for _, id := range bannerIDs {
 		b.AddArm(id)
+	}
+
+	// Remove arms that are no longer in the slot
+	existing := b.ArmIDs()
+	for _, id := range existing {
+		found := false
+		for _, bannerID := range bannerIDs {
+			if id == bannerID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			b.RemoveArm(id)
+		}
 	}
 }
 

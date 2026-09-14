@@ -30,10 +30,13 @@ func NewBandit() *Bandit {
 }
 
 // AddArm registers a new arm (banner) with uninformative prior Beta(1,1).
+// If the arm already exists, it is not modified.
 func (b *Bandit) AddArm(id string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.arms[id] = &arm{alpha: 1, beta: 1}
+	if _, ok := b.arms[id]; !ok {
+		b.arms[id] = &arm{alpha: 1, beta: 1}
+	}
 }
 
 // RemoveArm removes an arm by ID. No-op if the arm does not exist.
@@ -41,6 +44,17 @@ func (b *Bandit) RemoveArm(id string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	delete(b.arms, id)
+}
+
+// ArmIDs returns all registered arm IDs.
+func (b *Bandit) ArmIDs() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	ids := make([]string, 0, len(b.arms))
+	for id := range b.arms {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 // Update records an observation for the given arm.
@@ -119,7 +133,7 @@ func gammaMT(rng *rand.Rand, shape float64) float64 {
 	}
 
 	d := shape - 1.0/3.0
-	c := 1.0 / math.Sqrt(9.0 * d)
+	c := 1.0 / math.Sqrt(9.0*d)
 
 	for {
 		var x, v float64
