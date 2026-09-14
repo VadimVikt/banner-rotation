@@ -264,7 +264,7 @@
 ### Задача 7 — Интеграционные тесты
 **Цель:** End-to-end тесты API с реальным HTTP-сервером.
 
-- [ ] 7.1. Создать `internal/service/integration_test.go`:
+- [x] 7.1. Создать `internal/integration/integration_test.go`:
   - Запустить HTTP-сервер на случайном порту с в-memory SQLite + NOPublisher
   - `TestEndToEnd_PickAndClick`:
     1. Создать слот, добавить 3 баннера
@@ -277,7 +277,11 @@
     1. Выбрать из слота без баннеров → 404 или 400
   - `TestEndToEnd_ClickOnUnknownBanner`:
     1. Кликнуть на баннер, которого нет в слоте → 404
-- [ ] 7.2. Опционально: интеграционный тест RabbitMQ с реальным брокером в Docker
+- [x] 7.2. Опционально: интеграционный тест RabbitMQ с реальным брокером в Docker
+    - `internal/integration/rabbitmq_test.go` (авто-`skip` без Docker)
+    - `TestRabbitMQ_PublishAndConsume` — публикация + проверка очереди через `rabbitmqadmin`
+    - `TestRabbitMQ_MultiplePublishes` — 10 публикаций подряд
+    - `TestRabbitMQ_PublishDeserializesCorrectly` — сериализация/десериализация JSON события
 
 **Тесты:** Все подзадачи в 7.1.
 **Очки:** 2 очка (интеграционные тесты)
