@@ -5,8 +5,8 @@ BIN := "./bin/server"
 build:
 	go build -o $(BIN) ./cmd/server
 
-run: build
-	$(BIN)
+run:
+	docker compose up --build
 
 test:
 	go test -race -count 100 ./...

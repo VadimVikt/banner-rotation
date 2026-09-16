@@ -1,0 +1,10 @@
+bin/
+.git/
+.idea/
+.gigacode/
+docs/
+examples/
+*.db
+*.md
+docker-compose.yml
+Makefile

@@ -292,20 +292,20 @@
 ### Задача 8 — Docker + Makefile ⚠️ O2, O3c
 **Цель:** `make run` запускает сервис со всеми зависимостями; сборка для Go ≥ 1.25.
 
-- [ ] 8.1. Создать `Dockerfile` для Go-сервиса:
+- [x] 8.1. Создать `Dockerfile` для Go-сервиса:
   - Мультистейдж-сборка (`golang:1.25-alpine` builder → `alpine`)
   - EXPOSE порт
   - **Go ≥ 1.25** (обязательное требование)
-- [ ] 8.2. Создать `docker-compose.yml`:
+- [x] 8.2. Создать `docker-compose.yml`:
   - `app`: собирается из Dockerfile, монтирует конфиг, зависит от rabbitmq
   - `rabbitmq`: `rabbitmq:3-management`
-- [ ] 8.3. Доработать `Makefile`:
+- [x] 8.3. Доработать `Makefile`:
   - `make build` → `go build -o bin/server ./cmd/server`
   - `make run` → `docker compose up --build`
   - `make test` → `go test -race -count 100 ./...` (**обязательный формат**)
   - `make clean` → `rm -rf bin/`
-- [ ] 8.4. Добавить `.dockerignore`
-- [ ] 8.5. Убедиться, что `go.mod` указывает `go 1.25` или выше
+- [x] 8.4. Добавить `.dockerignore`
+- [x] 8.5. Убедиться, что `go.mod` указывает `go 1.25` или выше
 
 **Тесты:** Ручная проверка: `make build && make test` проходит успешно.
 **Очки:** 1 очко (`make build/run/test`)
@@ -322,7 +322,7 @@
   - Настроить `run.timeout = 5m`
 - [ ] 9.2. Добавить обработку ошибок повсеместно (без тихих провалов)
 - [ ] 9.3. Добавить timeout контекста в HTTP-хендлеры
-- [ ] 9.4. Добавить README.md с:
+- [x] 9.4. Добавить README.md с:
   - Описанием проекта
   - Эндпоинтами API
   - Как запустить (`make run`)
