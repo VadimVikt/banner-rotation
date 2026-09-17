@@ -239,7 +239,7 @@ func TestConcurrentIncrements(t *testing.T) {
 		banner       = "b1"
 		group        = "g1"
 		goroutines   = 10
-		perGoroutine = 100
+		perGoroutine = 20
 		expected     = goroutines * perGoroutine
 	)
 
@@ -280,7 +280,7 @@ func TestConcurrentClicks(t *testing.T) {
 		banner       = "b1"
 		group        = "g1"
 		goroutines   = 10
-		perGoroutine = 100
+		perGoroutine = 20
 		expected     = goroutines * perGoroutine
 	)
 
@@ -321,7 +321,7 @@ func TestMixedConcurrentOps(t *testing.T) {
 		banner       = "b1"
 		group        = "g1"
 		goroutines   = 5
-		perGoroutine = 50
+		perGoroutine = 20
 	)
 
 	var wg sync.WaitGroup

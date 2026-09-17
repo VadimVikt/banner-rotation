@@ -93,9 +93,10 @@ func (p *RabbitMQPublisher) declare() error {
 		return fmt.Errorf("declare queue: %w", err)
 	}
 
+	// "#" matches any routing key (events are published with the event type as routing key).
 	if err := p.ch.QueueBind(
 		p.queue,
-		"", // routing key
+		"#",
 		p.exchange,
 		false,
 		nil,
