@@ -51,7 +51,7 @@ func startRabbitMQContainer() (string, error) {
 	url := fmt.Sprintf("amqp://guest:guest@localhost:%d/", rabbitmqPort)
 
 	// Stop and remove any leftover container with the same name.
-	exec.Command("docker", "rm", "-f", containerName).Run() // ignore error
+	_ = exec.Command("docker", "rm", "-f", containerName).Run() //nolint:errcheck // best-effort cleanup
 
 	// Start RabbitMQ container.
 	cmd := exec.Command("docker", "run", "-d",
@@ -77,7 +77,7 @@ func startRabbitMQContainer() (string, error) {
 }
 
 func stopRabbitMQContainer() {
-	exec.Command("docker", "rm", "-f", containerName).Run() // ignore error
+	_ = exec.Command("docker", "rm", "-f", containerName).Run() //nolint:errcheck // best-effort cleanup
 }
 
 func requireRabbitMQ(t *testing.T) {
@@ -97,13 +97,13 @@ func consumeOne(t *testing.T, ev model.Event) model.Event {
 	if err != nil {
 		t.Fatalf("dial rabbitmq: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	ch, err := conn.Channel()
 	if err != nil {
 		t.Fatalf("open channel: %v", err)
 	}
-	defer ch.Close()
+	defer func() { _ = ch.Close() }()
 
 	queue := fmt.Sprintf("test_consume_%d", time.Now().UnixNano())
 	if _, err := ch.QueueDeclare(queue, false, true, true, false, nil); err != nil {

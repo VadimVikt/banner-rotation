@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// 3. Connect to RabbitMQ (use NOPublisher when URL is "nop")
 	var pub event.Publisher

@@ -60,7 +60,7 @@ func (p *RabbitMQPublisher) connect() error {
 
 	p.ch, err = p.conn.Channel()
 	if err != nil {
-		p.conn.Close()
+		_ = p.conn.Close()
 		return fmt.Errorf("open channel: %w", err)
 	}
 
@@ -144,10 +144,10 @@ func (p *RabbitMQPublisher) Publish(_ context.Context, ev model.Event) error {
 // Close closes the AMQP channel and connection.
 func (p *RabbitMQPublisher) Close() {
 	if p.ch != nil {
-		p.ch.Close()
+		_ = p.ch.Close()
 	}
 	if p.conn != nil {
-		p.conn.Close()
+		_ = p.conn.Close()
 	}
 }
 

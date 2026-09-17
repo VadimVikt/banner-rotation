@@ -28,7 +28,7 @@ func newTestRepo(t *testing.T) *repo.Repo {
 	if err != nil {
 		t.Fatalf("new repo: %v", err)
 	}
-	t.Cleanup(func() { r.Close() })
+	t.Cleanup(func() { _ = r.Close() })
 	return r
 }
 

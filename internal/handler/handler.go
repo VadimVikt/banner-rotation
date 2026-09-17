@@ -152,7 +152,10 @@ func (h *Handlers) PickBanner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"banner_id": bannerID})
+	if err := json.NewEncoder(w).Encode(map[string]string{"banner_id": bannerID}); err != nil {
+		//nolint:errcheck // headers already sent; nothing more we can do
+		_ = err
+	}
 }
 
 // RegisterClick handles POST /slots/:slotID/banners/:bannerID/click?groupID=...
@@ -198,5 +201,6 @@ func writeJSONError(w http.ResponseWriter, code int, msg string, args ...any) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	//nolint:errcheck // best-effort: status code already sent
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
