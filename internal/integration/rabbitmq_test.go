@@ -1,81 +1,151 @@
 // Package integration provides RabbitMQ integration tests with a real broker in Docker.
+//
+// The broker container is started once in TestMain for the whole test binary run,
+// so `-count N` does not restart the container N times. Tests skip when Docker
+// is unavailable.
 package integration
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/streadway/amqp"
 
 	"github.com/VadimVikt/banner-rotation/internal/event"
 	"github.com/VadimVikt/banner-rotation/internal/model"
 )
 
 const (
-	rabbitmqImage = "rabbitmq:3-management"
-	rabbitmqPort  = 5678 // host port (avoid conflict with default 5672)
-	containerName = "banner-rotation-rabbitmq-test"
+	rabbitmqImage      = "rabbitmq:3-management"
+	rabbitmqPort       = 5678 // host port (avoid conflict with default 5672)
+	containerName      = "banner-rotation-rabbitmq-test"
+	readinessTimeout   = 60 * time.Second
+	consumeTimeout     = 10 * time.Second
+	eventsExchangeName = "banner_events" // must match event package default
 )
 
-// setupRabbitMQ starts a RabbitMQ container via Docker CLI and returns the AMQP URL.
-// It also registers a cleanup function to stop and remove the container.
-func setupRabbitMQ(t *testing.T) string {
-	t.Helper()
+var (
+	rabbitmqAvailable bool
+	rabbitmqURL       string
+)
 
-	// Check if Docker is available
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("docker not found, skipping RabbitMQ integration test")
+// TestMain starts the RabbitMQ container once for the entire test run.
+func TestMain(m *testing.M) {
+	if _, err := exec.LookPath("docker"); err == nil {
+		if url, err := startRabbitMQContainer(); err == nil {
+			rabbitmqURL = url
+			rabbitmqAvailable = true
+		}
 	}
+	code := m.Run()
+	stopRabbitMQContainer()
+	os.Exit(code)
+}
 
-	// Stop and remove any previous container with the same name
+func startRabbitMQContainer() (string, error) {
+	url := fmt.Sprintf("amqp://guest:guest@localhost:%d/", rabbitmqPort)
+
+	// Stop and remove any leftover container with the same name.
 	exec.Command("docker", "rm", "-f", containerName).Run() // ignore error
 
-	// Start RabbitMQ container
+	// Start RabbitMQ container.
 	cmd := exec.Command("docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%d:5672", rabbitmqPort),
 		rabbitmqImage,
 	)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Skipf("docker run failed: %v (output: %s), skipping RabbitMQ integration test", err, string(out))
+		return "", fmt.Errorf("docker run: %w (output: %s)", err, string(out))
 	}
 
-	// Register cleanup
-	t.Cleanup(func() {
-		exec.Command("docker", "rm", "-f", containerName).Run()
-	})
-
-	// Wait for RabbitMQ to be ready
-	url := fmt.Sprintf("amqp://guest:guest@localhost:%d/", rabbitmqPort)
-	for i := 0; i < 30; i++ {
-		time.Sleep(1 * time.Second)
+	// Wait for the broker to accept AMQP connections.
+	deadline := time.Now().Add(readinessTimeout)
+	for time.Now().Before(deadline) {
 		pub, err := event.NewRabbitMQPublisher(url)
-		if err != nil {
-			continue
+		if err == nil {
+			pub.Close()
+			return url, nil
 		}
-		pub.Close()
-		return url
+		time.Sleep(time.Second)
 	}
-
-	t.Skip("RabbitMQ did not start in time, skipping integration test")
-	return ""
+	return "", fmt.Errorf("rabbitmq did not become ready within %s", readinessTimeout)
 }
 
-// TestRabbitMQ_PublishAndConsume verifies that events are correctly published to RabbitMQ and can be consumed.
-func TestRabbitMQ_PublishAndConsume(t *testing.T) {
-	url := setupRabbitMQ(t)
+func stopRabbitMQContainer() {
+	exec.Command("docker", "rm", "-f", containerName).Run() // ignore error
+}
 
-	// Create publisher
-	pub, err := event.NewRabbitMQPublisher(url)
+func requireRabbitMQ(t *testing.T) {
+	t.Helper()
+	if !rabbitmqAvailable {
+		t.Skip("docker/RabbitMQ unavailable, skipping RabbitMQ integration test")
+	}
+}
+
+// consumeOne declares a unique exclusive queue bound to the events exchange,
+// publishes ev, and returns the first delivered message decoded as model.Event.
+// Binding happens before publish so only this run's event is expected.
+func consumeOne(t *testing.T, ev model.Event) model.Event {
+	t.Helper()
+
+	conn, err := amqp.Dial(rabbitmqURL)
 	if err != nil {
-		t.Fatalf("failed to create RabbitMQ publisher: %v", err)
+		t.Fatalf("dial rabbitmq: %v", err)
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		t.Fatalf("open channel: %v", err)
+	}
+	defer ch.Close()
+
+	queue := fmt.Sprintf("test_consume_%d", time.Now().UnixNano())
+	if _, err := ch.QueueDeclare(queue, false, true, true, false, nil); err != nil {
+		t.Fatalf("declare consumer queue: %v", err)
+	}
+	if err := ch.QueueBind(queue, "#", eventsExchangeName, false, nil); err != nil {
+		t.Fatalf("bind consumer queue: %v", err)
+	}
+
+	pub, err := event.NewRabbitMQPublisher(rabbitmqURL)
+	if err != nil {
+		t.Fatalf("create publisher: %v", err)
 	}
 	defer pub.Close()
 
-	// Create event
+	if err := pub.Publish(context.Background(), ev); err != nil {
+		t.Fatalf("publish event: %v", err)
+	}
+
+	dels, err := ch.Consume(queue, "", false, false, false, false, nil)
+	if err != nil {
+		t.Fatalf("consume from queue: %v", err)
+	}
+
+	select {
+	case d := <-dels:
+		var got model.Event
+		if err := json.Unmarshal(d.Body, &got); err != nil {
+			t.Fatalf("unmarshal delivered event: %v", err)
+		}
+		return got
+	case <-time.After(consumeTimeout):
+		t.Fatal("timed out waiting for delivered message")
+	}
+	return model.Event{}
+}
+
+// TestRabbitMQ_PublishAndConsume verifies that a published event is delivered
+// to a queue bound to the events exchange with an intact JSON payload.
+func TestRabbitMQ_PublishAndConsume(t *testing.T) {
+	requireRabbitMQ(t)
+
 	ev := model.Event{
 		Type:      model.EventTypeImpression,
 		SlotID:    "slot1",
@@ -84,47 +154,18 @@ func TestRabbitMQ_PublishAndConsume(t *testing.T) {
 		Timestamp: time.Now(),
 	}
 
-	// Publish event
-	if err := pub.Publish(context.Background(), ev); err != nil {
-		t.Fatalf("failed to publish event: %v", err)
+	got := consumeOne(t, ev)
+
+	if got.Type != ev.Type || got.SlotID != ev.SlotID || got.BannerID != ev.BannerID || got.GroupID != ev.GroupID {
+		t.Fatalf("delivered event mismatch: got %+v, want %+v", got, ev)
 	}
-
-	// Consume the event using Docker CLI (rabbitmqadmin)
-	// Since we can't easily consume with streadway/amqp in a test,
-	// we'll verify by checking the queue length via management API or rabbitmqadmin.
-	//
-	// Alternative: Use a second publisher to connect and consume.
-	// Simplest: use docker exec with rabbitmqadmin.
-
-	// Wait a moment for the message to be delivered
-	time.Sleep(500 * time.Millisecond)
-
-	// Try to get message count from the queue using docker exec
-	cmd := exec.Command("docker", "exec", containerName,
-		"rabbitmqadmin",
-		"list", "queues", "name", "messages",
-	)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		// rabbitmqadmin may not be available in all images, skip this check
-		t.Logf("rabbitmqadmin not available, skipping queue check (output: %s)", string(out))
-		return
-	}
-
-	output := string(out)
-	if !strings.Contains(output, "banner_events_queue") {
-		t.Logf("queue not found in output: %s", output)
-		return
-	}
-
-	t.Logf("RabbitMQ queue status: %s", output)
 }
 
 // TestRabbitMQ_MultiplePublishes verifies that multiple events can be published successfully.
 func TestRabbitMQ_MultiplePublishes(t *testing.T) {
-	url := setupRabbitMQ(t)
+	requireRabbitMQ(t)
 
-	pub, err := event.NewRabbitMQPublisher(url)
+	pub, err := event.NewRabbitMQPublisher(rabbitmqURL)
 	if err != nil {
 		t.Fatalf("failed to create RabbitMQ publisher: %v", err)
 	}
@@ -143,21 +184,13 @@ func TestRabbitMQ_MultiplePublishes(t *testing.T) {
 			t.Fatalf("publish event #%d failed: %v", i, err)
 		}
 	}
-
-	t.Log("Successfully published 10 events to RabbitMQ")
 }
 
-// TestRabbitMQ_PublishDeserializesCorrectly verifies that published events can be deserialized.
+// TestRabbitMQ_PublishDeserializesCorrectly verifies that an event round-trips
+// through the broker: publish JSON, consume, decode, and compare all fields.
 func TestRabbitMQ_PublishDeserializesCorrectly(t *testing.T) {
-	url := setupRabbitMQ(t)
+	requireRabbitMQ(t)
 
-	pub, err := event.NewRabbitMQPublisher(url)
-	if err != nil {
-		t.Fatalf("failed to create RabbitMQ publisher: %v", err)
-	}
-	defer pub.Close()
-
-	// Create event with known values
 	ev := model.Event{
 		Type:      model.EventTypeImpression,
 		SlotID:    "test_slot",
@@ -166,29 +199,10 @@ func TestRabbitMQ_PublishDeserializesCorrectly(t *testing.T) {
 		Timestamp: time.Date(2025, 9, 11, 12, 0, 0, 0, time.UTC),
 	}
 
-	// Publish event
-	if err := pub.Publish(context.Background(), ev); err != nil {
-		t.Fatalf("failed to publish event: %v", err)
+	got := consumeOne(t, ev)
+
+	if got.Type != ev.Type || got.SlotID != ev.SlotID || got.BannerID != ev.BannerID ||
+		got.GroupID != ev.GroupID || !got.Timestamp.Equal(ev.Timestamp) {
+		t.Fatalf("event deserialization mismatch after round-trip: got %+v, want %+v", got, ev)
 	}
-
-	// Consume from the queue using a new publisher's connection
-	// We'll use docker exec to pull a message from the queue
-	time.Sleep(500 * time.Millisecond)
-
-	// Since consuming with amqp is complex in tests, verify by checking JSON serialization
-	body, err := json.Marshal(ev)
-	if err != nil {
-		t.Fatalf("failed to marshal event: %v", err)
-	}
-
-	var ev2 model.Event
-	if err := json.Unmarshal(body, &ev2); err != nil {
-		t.Fatalf("failed to unmarshal event: %v", err)
-	}
-
-	if ev2.Type != ev.Type || ev2.SlotID != ev.SlotID || ev2.BannerID != ev.BannerID {
-		t.Errorf("event deserialization mismatch: got %+v, want %+v", ev2, ev)
-	}
-
-	t.Log("Event serialization/deserialization verified")
 }
