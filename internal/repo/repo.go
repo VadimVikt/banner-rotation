@@ -68,14 +68,14 @@ func NewRepo(dsn string) (*Repo, error) {
 
 	// Verify the connection is alive.
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
 	r := &Repo{db: db}
 
 	if _, err := db.Exec(schema); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("execute schema: %w", err)
 	}
 
@@ -144,7 +144,7 @@ func (r *Repo) GetBannersForSlot(slotID string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query banners for slot %q: %w", slotID, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var banners []string
 	for rows.Next() {

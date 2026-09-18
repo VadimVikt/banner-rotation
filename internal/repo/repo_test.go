@@ -20,7 +20,7 @@ func newTestRepo(t *testing.T) *Repo {
 	if err != nil {
 		t.Fatalf("NewRepo: %v", err)
 	}
-	t.Cleanup(func() { r.Close() })
+	t.Cleanup(func() { _ = r.Close() })
 	return r
 }
 
@@ -432,7 +432,7 @@ func TestNewRepoValidDSN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRepo: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// Should be able to use it
 	if err := r.CreateSlot("s1", "test"); err != nil {

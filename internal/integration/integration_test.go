@@ -49,7 +49,7 @@ func jsonBody(t *testing.T, data any) io.Reader {
 // TestEndToEnd_PickAndClick verifies the full pick-and-click flow.
 func TestEndToEnd_PickAndClick(t *testing.T) {
 	router, r := setupTestServer(t)
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	slotID := "slot1"
 	groupID := "group1"
@@ -143,7 +143,7 @@ func TestEndToEnd_PickAndClick(t *testing.T) {
 // TestEndToEnd_RemoveBanner verifies that removed banners are never returned.
 func TestEndToEnd_RemoveBanner(t *testing.T) {
 	router, r := setupTestServer(t)
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	slotID := "slot1"
 	groupID := "group1"
@@ -214,7 +214,7 @@ func TestEndToEnd_RemoveBanner(t *testing.T) {
 // TestEndToEnd_EmptySlot verifies that picking from empty slot returns 404.
 func TestEndToEnd_EmptySlot(t *testing.T) {
 	router, r := setupTestServer(t)
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	slotID := "empty_slot"
 
@@ -242,7 +242,7 @@ func TestEndToEnd_EmptySlot(t *testing.T) {
 // TestEndToEnd_ClickOnUnknownBanner verifies that clicking on unknown banner returns 404.
 func TestEndToEnd_ClickOnUnknownBanner(t *testing.T) {
 	router, r := setupTestServer(t)
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	slotID := "slot1"
 	groupID := "group1"
