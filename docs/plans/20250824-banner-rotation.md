@@ -339,7 +339,7 @@
 ### Задача 10 — CI/CD пайплайн ⚠️ O3
 **Цель:** GitHub Actions на ветке `master`: lint → test → build.
 
-- [ ] 10.1. Создать `.github/workflows/ci.yaml`:
+- [x] 10.1. Создать `.github/workflows/ci.yaml`:
   - Триггер: `push` и `pull_request` на `master`
   - Job `lint`:
     - `uses: golangci/golangci-lint-action@v6`
@@ -349,7 +349,7 @@
   - Job `build`:
     - `go build -o bin/server ./cmd/server`
     - Go ≥ 1.25 (через `go-version: '1.25'`)
-- [ ] 10.2. Убедиться, что пайплайн проходит на ветке `master` (зелёный чек)
+- [x] 10.2. Убедиться, что пайплайн проходит на ветке `master` (зелёный чек)
 
 **Тесты:** Пайплайн проходит успешно.
 **Оценка:** 1 час
